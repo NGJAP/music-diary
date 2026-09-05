@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>音乐手账</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #161616;
+      --surface-2: #222;
+      --border: #2a2a2a;
+      --text: #f5f5f5;
+      --text-2: #999;
+      --accent: #ff6b6b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      padding-bottom: 40px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-actions { display: flex; gap: 10px; }
+    button, .file-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover, .file-btn:hover { background: var(--surface-2); border-color: #444; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: #555; }
+    
+    .section-title {
+      font-size: 14px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 24px 0 12px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: transform 0.15s;
+    }
+    .card:active { transform: scale(0.98); }
+    .card-cover {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: #222;
+      display: block;
+    }
+    .card-body { padding: 12px; }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-artist {
+      font-size: 12px;
+      color: var(--text-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .card-year {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .stars {
+      margin-top: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .star { opacity: 0.4; transition: opacity 0.15s; }
+    .star.filled { opacity: 1; }
+    .star:hover { opacity: 0.8; }
+    
+    .note {
+      font-size: 12px;
+      color: #bbb;
+      margin-top: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .card-actions button {
+      flex: 1;
+      padding: 6px 0;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .btn-danger { color: var(--accent); }
+    
+    .empty {
+      text-align: center;
+      color: var(--text-2);
+      padding: 48px 20px;
+      font-size: 14px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 420px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .modal-cover {
+      width: 100px;
+      height: 100px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #222;
+    }
+    .modal-title { font-size: 17px; font-weight: 600; }
+    .modal-artist { font-size: 14px; color: var(--text-2); margin-top: 4px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 6px;
+    }
+    .form-group textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      min-height: 100px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .rating-input {
+      display: flex;
+      gap: 8px;
+      font-size: 28px;
+      cursor: pointer;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-actions button { flex: 1; padding: 12px; font-size: 15px; }
+    .btn-primary { background: var(--text); color: var(--bg); font-weight: 600; }
+    .btn-primary:hover { background: #ddd; }
+    
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface-2);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+      border: 1px solid var(--border);
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>音乐手账</h1>
+      <div class="header-actions">
+        <button onclick="exportData()">导出</button>
+        <label class="file-btn">
+          导入
+          <input type="file" accept=".json" hidden onchange="importData(this)">
+        </label>
+      </div>
+    </header>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="搜索专辑、艺人..." onkeypress="if(event.key==='Enter') searchAlbums()">
+      <button id="searchBtn" onclick="searchAlbums()">搜索</button>
+    </div>
+
+    <div class="section-title">搜索结果</div>
+    <div id="searchResults" class="grid">
+      <div class="empty">搜索专辑后结果会显示在这里</div>
+    </div>
+
+    <div class="section-title">我的记录</div>
+    <div id="myRecords" class="grid">
+      <div class="empty">还没有记录，去搜索一张专辑吧</div>
+    </div>
+  </div>
+
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <img id="modalCover" class="modal-cover" src="" alt="">
+        <div>
+          <div class="modal-title" id="modalTitle"></div>
+          <div class="modal-artist" id="modalArtist"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>评分</label>
+        <div class="rating-input" id="ratingInput">
+          <span data-rating="1">★</span>
+          <span data-rating="2">★</span>
+          <span data-rating="3">★</span>
+          <span data-rating="4">★</span>
+          <span data-rating="5">★</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>感受</label>
+        <textarea id="modalNote" placeholder="写下你听完这张专辑的感受..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button onclick="closeModal()">取消</button>
+        <button class="btn-primary" onclick="saveModal()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DB_NAME = 'MusicDiary';
+    const STORE_NAME = 'records';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+        req.onupgradeneeded = (e) => {
+          e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        };
+      });
+    }
+
+    async function saveRecord(record) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(record);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function getRecords() {
+      const db = await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+      });
+    }
+
+    async function deleteRecord(id) {
+      const db = await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(id);
+        tx.oncomplete = resolve;
+      });
+    }
+
+    async function searchAlbums() {
+      const q = document.getElementById('searchInput').value.trim();
+      if (!q) return;
+      
+      const btn = document.getElementById('searchBtn');
+      btn.disabled = true;
+      btn.textContent = '搜索中...';
+      
+      const container = document.getElementById('searchResults');
+      container.innerHTML = '<div class="empty">正在搜索...</div>';
+      
+      try {
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=album&limit=20&country=us`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderSearchResults(data.results);
+      } catch (err) {
+        container.innerHTML = '<div class="empty">搜索失败，请检查网络或开启 VPN 后重试</div>';
+        showToast('搜索失败：' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '搜索';
+      }
+    }
+
+    function renderSearchResults(albums) {
+      const container = document.getElementById('searchResults');
+      if (!albums || albums.length === 0) {
+        container.innerHTML = '<div class="empty">没找到相关专辑</div>';
+        return;
+      }
+      container.innerHTML = albums.map(a => {
+        const cover = (a.artworkUrl100 || '').replace('100x100bb', '300x300bb') || 'https://via.placeholder.com/300?text=No+Cover';
+        const year = a.releaseDate ? a.releaseDate.slice(0, 4) : '';
+        return `
+          <div class="card search-card"
+               data-id="${a.collectionId}"
+               data-title="${escapeHtml(a.collectionName || '')}"
+               data-artist="${escapeHtml(a.artistName || '')}"
+               data-cover="${cover}">
+            <img class="card-cover" src="${cover}" alt="" loading="lazy">
+            <div class="card-body">
+              <div class="card-title">${escapeHtml(a.collectionName || '')}</div>
+              <div class="card-artist">${escapeHtml(a.artistName || '')}</div>
+              <div class="card-year">${year}</div>
+              <div class="stars search-stars">
+                ${[1,2,3,4,5].map(n => `<span class="star" data-rating="${n}">★</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('searchResults').addEventListener('click', async (e) => {
+      const star = e.target.closest('.search-stars .star');
+      if (!star) return;
+      e.stopPropagation();
+      
+      const card = star.closest('.search-card');
+      const rating = Number(star.dataset.rating);
+      const id = card.dataset.id;
+      
+      const existing = await getRecords();
+      if (existing.find(r => r.id === id)) {
+        showToast('这张专辑已经记录过了');
+        return;
+      }
+      
+      const note = prompt('写一句感受（可直接回车跳过）：') || '';
+      await saveRecord({
+        id: String(id),
+        title: card.dataset.title,
+        artist: card.dataset.artist,
+        cover: card.dataset.cover,
+        rating,
+        note,
+        date: new Date().toISOString()
+      });
+      showToast('已添加');
+      renderRecords();
+    });
+
+    async function renderRecords() {
+      const records = await getRecords();
+      const container = document.getElementById('myRecords');
+      records.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      if (records.length === 0) {
+        container.innerHTML = '<div class="empty">还没有记录，去搜索一张专辑吧</div>';
+        return;
+      }
+      
+      container.innerHTML = records.map(r => `
+        <div class="card">
+          <img class="card-cover" src="${r.cover}" alt="" loading="lazy">
+          <div class="card-body">
+            <div class="card-title">${escapeHtml(r.title)}</div>
+            <div class="card-artist">${escapeHtml(r.artist)}</div>
+            <div class="stars">${renderStars(r.rating)}</div>
+            ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ''}
+            <div class="card-actions">
+              <button onclick="openEdit('${r.id}')">编辑</button>
+              <button class="btn-danger" onclick="deleteItem('${r.id}')">删除</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderStars(rating) {
+      return [1,2,3,4,5].map(n => 
+        `<span class="star ${n <= rating ? 'filled' : ''}">★</span>`
+      ).join('');
+    }
+
+    async function deleteItem(id) {
+      if (!confirm('确定删除这条记录吗？')) return;
+      await deleteRecord(id);
+      renderRecords();
+      showToast('已删除');
+    }
+
+    let editingId = null;
+
+    async function openEdit(id) {
+      const records = await getRecords();
+      const r = records.find(x => x.id === id);
+      if (!r) return;
+      editingId = id;
+      document.getElementById('modalCover').src = r.cover;
+      document.getElementById('modalTitle').textContent = r.title;
+      document.getElementById('modalArtist').textContent = r.artist;
+      document.getElementById('modalNote').value = r.note || '';
+      setRating(r.rating || 0);
+      document.getElementById('editModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('show');
+      editingId = null;
+    }
+
+    function setRating(rating) {
+      document.querySelectorAll('#ratingInput span').forEach(el => {
+        el.classList.toggle('filled', Number(el.dataset.rating) <= rating);
+      });
+      document.getElementById('ratingInput').dataset.value = rating;
+    }
+
+    document.getElementById('ratingInput').addEventListener('click', (e) => {
+      if (e.target.dataset.rating) {
+        setRating(Number(e.target.dataset.rating));
+      }
+    });
+
+    async function saveModal() {
+      if (!editingId) return;
+      const records = await getRecords();
+      const r = records.find(x => x.id === editingId);
+      if (!r) return;
+      r.rating = Number(document.getElementById('ratingInput').dataset.value || 0);
+      r.note = document.getElementById('modalNote').value.trim();
+      await saveRecord(r);
+      closeModal();
+      renderRecords();
+      showToast('已保存');
+    }
+
+    async function exportData() {
+      const records = await getRecords();
+      if (records.length === 0) {
+        showToast('还没有记录可导出');
+        return;
+      }
+      const data = {
+        app: 'music-diary',
+        version: 1,
+        exportDate: new Date().toISOString(),
+        records
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `music-diary-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已导出');
+    }
+
+    async function importData(input) {
+      const file = input.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const records = data.records || data;
+        if (!Array.isArray(records)) throw new Error('格式错误');
+        
+        let count = 0;
+        for (const r of records) {
+          if (r.id && r.title) {
+            await saveRecord(r);
+            count++;
+          }
+        }
+        renderRecords();
+        showToast(`成功导入 ${count} 条记录`);
+      } catch (err) {
+        showToast('导入失败：文件格式不对');
+      }
+      input.value = '';
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    renderRecords();
+  </script>
+</body>
+</html>
