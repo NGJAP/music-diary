@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>音乐手账</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #161616;
+      --surface-2: #222;
+      --border: #2a2a2a;
+      --text: #f5f5f5;
+      --text-2: #999;
+      --accent: #ff6b6b;
+      --star: #555;
+      --star-filled: #ffd700;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      padding-bottom: 100px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-actions { display: flex; gap: 10px; }
+    button, .file-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover, .file-btn:hover { background: var(--surface-2); border-color: #444; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    input[type="text"], input[type="number"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+    }
+    input[type="text"]:focus, input[type="number"]:focus { border-color: #555; }
+    
+    .source-hint {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 20px 0 12px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: transform 0.15s;
+      cursor: pointer;
+    }
+    .card:active { transform: scale(0.98); }
+    .card-cover {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: #222;
+      display: block;
+    }
+    .card-body { padding: 12px; }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-artist {
+      font-size: 12px;
+      color: var(--text-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .card-year {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .card-source {
+      font-size: 10px;
+      color: #666;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+    .album-score {
+      margin-top: 8px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--star-filled);
+    }
+    .album-score::after {
+      content: '/10';
+      font-size: 12px;
+      color: var(--text-2);
+      margin-left: 2px;
+      font-weight: 400;
+    }
+    .note {
+      font-size: 12px;
+      color: #bbb;
+      margin-top: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .empty {
+      text-align: center;
+      color: var(--text-2);
+      padding: 60px 20px;
+      font-size: 14px;
+    }
+    
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(16, 16, 16, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+      z-index: 50;
+    }
+    .tab-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 0;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab-item.active {
+      color: var(--text);
+    }
+    .tab-icon {
+      font-size: 22px;
+      line-height: 1;
+    }
+    .tab-label {
+      font-size: 11px;
+    }
+    
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .modal-cover-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .modal-cover {
+      width: 110px;
+      height: 110px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #222;
+      display: block;
+    }
+    .cover-upload-btn {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      background: rgba(0,0,0,0.75);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+    .modal-title { font-size: 18px; font-weight: 700; line-height: 1.3; }
+    .modal-artist { font-size: 14px; color: var(--text-2); margin-top: 4px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 8px;
+    }
+    .form-group textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      min-height: 100px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .score-input {
+      width: 100px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .tracks-section {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+    .tracks-section h4 {
+      font-size: 14px;
+      color: var(--text-2);
+      margin-bottom: 12px;
+    }
+    .track-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      min-height: 44px;
+    }
+    .track-item:last-child { border-bottom: none; }
+    .track-number {
+      width: 26px;
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+    }
+    .track-name {
+      flex: 1;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .track-stars {
+      font-size: 18px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      white-space: nowrap;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .star {
+      color: var(--star);
+      opacity: 0.6;
+      transition: all 0.12s;
+      display: inline-block;
+      padding: 0 1px;
+    }
+    .star.filled {
+      color: var(--star-filled);
+      opacity: 1;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
+    }
+    .track-stars .star:active {
+      transform: scale(1.5);
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .modal-actions button { flex: 1; padding: 14px; font-size: 15px; }
+    .btn-primary { background: var(--text); color: var(--bg); font-weight: 600; }
+    .btn-primary:hover { background: #ddd; }
+    .loading { text-align: center; color: var(--text-2); padding: 40px; }
+    
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface-2);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+      border: 1px solid var(--border);
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="main-content">
+      <div class="container">
+        <header>
+          <h1>音乐手账</h1>
+          <div class="header-actions">
+            <button onclick="exportData()">导出</button>
+            <label class="file-btn">
+              导入
+              <input type="file" accept=".json" hidden onchange="importData(this)">
+            </label>
+          </div>
+        </header>
+
+        <div class="tab-panel active" id="panel-records">
+          <div id="myRecords" class="grid">
+            <div class="empty">还没有记录，去搜索一张专辑吧</div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-search">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索专辑、艺人..." onkeypress="if(event.key==='Enter') searchAlbums()">
+            <button id="searchBtn" onclick="searchAlbums()">搜索</button>
+          </div>
+          <div class="source-hint">数据源：iTunes · Deezer · MusicBrainz</div>
+          <div id="searchResults" class="grid">
+            <div class="empty">搜索专辑后结果会显示在这里</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="tab-bar">
+      <div class="tab-item active" onclick="switchTab('records')" data-tab="records">
+        <span class="tab-icon">📀</span>
+        <span class="tab-label">我的记录</span>
+      </div>
+      <div class="tab-item" onclick="switchTab('search')" data-tab="search">
+        <span class="tab-icon">🔍</span>
+        <span class="tab-label">搜索</span>
+      </div>
+    </nav>
+  </div>
+
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-cover-wrap">
+          <img id="modalCover" class="modal-cover" src="" alt="">
+          <button class="cover-upload-btn" onclick="triggerCoverUpload()" title="更换封面">📷</button>
+        </div>
+        <div>
+          <div class="modal-title" id="modalTitle"></div>
+          <div class="modal-artist" id="modalArtist"></div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>专辑评分（0 - 10 分）</label>
+        <input type="number" id="modalScore" class="score-input" min="0" max="10" step="0.1" placeholder="0-10">
+      </div>
+      
+      <div class="form-group">
+        <label>感受</label>
+        <textarea id="modalNote" placeholder="写下你听完这张专辑的感受..."></textarea>
+      </div>
+      
+      <div class="tracks-section" id="tracksSection">
+        <h4>单曲评分</h4>
+        <div id="tracksList"></div>
+      </div>
+      
+      <div class="modal-actions">
+        <button onclick="closeModal()">取消</button>
+        <button class="btn-primary" onclick="saveModal()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="coverInput" accept="image/*" hidden onchange="handleCoverUpload(this)">
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DB_NAME = 'MusicDiary';
+    const STORE_NAME = 'records';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+        req.onupgradeneeded = (e) => {
+          e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        };
+      });
+    }
+
+    async function saveRecord(record) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(record);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function getRecords() {
+      const db = await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+      });
+    }
+
+    async function deleteRecord(id) {
+      const db = await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(id);
+        tx.oncomplete = resolve;
+      });
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      document.getElementById(`panel-${tab}`).classList.add('active');
+      document.querySelector(`.tab-item[data-tab="${tab}"]`).classList.add('active');
+      if (tab === 'records') renderRecords();
+    }
+
+    // ===== 封面处理 =====
+
+    function triggerCoverUpload() {
+      document.getElementById('coverInput').click();
+    }
+
+    async function handleCoverUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      
+      try {
+        showToast('正在处理图片...');
+        const base64 = await compressImage(file, 900, 0.85);
+        document.getElementById('modalCover').src = base64;
+        modalState.cover = base64;
+        showToast('封面已更新，保存后生效');
+      } catch (err) {
+        showToast('图片处理失败：' + err.message);
+      }
+      input.value = '';
+    }
+
+    function compressImage(file, maxWidth, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxWidth) {
+              h = Math.round(h * maxWidth / w);
+              w = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          };
+          img.onerror = () => reject(new Error('无法读取图片'));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('读取文件失败'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ===== 搜索相关 =====
+    
+    function normalizeText(str) {
+      return (str || '').toLowerCase().replace(/[^\w\s\u4e00-\u9fa5]/g, '').trim();
+    }
+
+    function albumKey(title, artist) {
+      return normalizeText(title) + '|' + normalizeText(artist);
+    }
+
+    async function searchAlbums() {
+      const q = document.getElementById('searchInput').value.trim();
+      if (!q) return;
+      
+      const btn = document.getElementById('searchBtn');
+      btn.disabled = true;
+      btn.textContent = '搜索中...';
+      
+      const container = document.getElementById('searchResults');
+      container.innerHTML = '<div class="empty">正在搜索...</div>';
+      
+      try {
+        const [itunesResults, deezerResults, mbResults] = await Promise.all([
+          searchItunes(q).catch(() => []),
+          searchDeezer(q).catch(() => []),
+          searchMusicBrainz(q).catch(() => [])
+        ]);
+        
+        const merged = mergeResults(itunesResults, deezerResults, mbResults);
+        renderSearchResults(merged);
+      } catch (err) {
+        container.innerHTML = '<div class="empty">搜索失败，请检查网络或 VPN 后重试</div>';
+        showToast('搜索失败：' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '搜索';
+      }
+    }
+
+    async function searchItunes(q) {
+      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=album&limit=20&country=us`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return (data.results || []).map(a => ({
+        id: String(a.collectionId),
+        title: a.collectionName || '',
+        artist: a.artistName || '',
+        cover: (a.artworkUrl100 || '').replace('100x100bb', '600x600bb'),
+        year: a.releaseDate ? a.releaseDate.slice(0, 4) : '',
+        source: 'iTunes'
+      }));
+    }
+
+    async function searchDeezer(q) {
+      const url = `https://api.deezer.com/search/album?q=${encodeURIComponent(q)}&limit=20`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return (data.data || []).map(a => ({
+        id: 'dz_' + a.id,
+        title: a.title || '',
+        artist: a.artist?.name || '',
+        cover: a.cover_xl || a.cover_big || a.cover || '',
+        year: a.release_date ? a.release_date.slice(0, 4) : '',
+        source: 'Deezer',
+        deezerId: a.id
+      }));
+    }
+
+    async function searchMusicBrainz(q) {
+      const url = `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(q)}&fmt=json&limit=15`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'MusicDiaryPWA/1.0 (personal use)' }
+      });
+      const data = await res.json();
+      const releases = (data.releases || []).slice(0, 10);
+      
+      return await Promise.all(releases.map(async r => {
+        const cover = await getMusicBrainzCover(r.id);
+        return {
+          id: 'mb_' + r.id,
+          title: r.title || '',
+          artist: r['artist-credit']?.[0]?.name || r['artist-credit']?.[0]?.artist?.name || '',
+          cover: cover,
+          year: r.date ? r.date.slice(0, 4) : '',
+          source: 'MusicBrainz',
+          mbId: r.id
+        };
+      }));
+    }
+
+    async function getMusicBrainzCover(releaseId) {
+      try {
+        const res = await fetch(`https://coverartarchive.org/release/${releaseId}/front`, { method: 'HEAD' });
+        if (res.ok) return `https://coverartarchive.org/release/${releaseId}/front`;
+      } catch (e) {}
+      return '';
+    }
+
+    function mergeResults(...lists) {
+      const seen = new Set();
+      const result = [];
+      
+      for (const list of lists) {
+        for (const item of list) {
+          if (!item.title) continue;
+          const key = albumKey(item.title, item.artist);
+          if (!seen.has(key)) {
+            seen.add(key);
+            result.push(item);
+          }
+        }
+      }
+      return result;
+    }
+
+    function renderSearchResults(albums) {
+      const container = document.getElementById('searchResults');
+      if (!albums || albums.length === 0) {
+        container.innerHTML = '<div class="empty">没找到相关专辑</div>';
+        return;
+      }
+      container.innerHTML = albums.map(a => {
+        const cover = a.cover || 'https://via.placeholder.com/300?text=No+Cover';
+        return `
+          <div class="card search-card"
+               data-id="${a.id}"
+               data-title="${escapeHtml(a.title)}"
+               data-artist="${escapeHtml(a.artist)}"
+               data-cover="${cover}"
+               data-source="${a.source}"
+               data-deezer-id="${a.deezerId || ''}"
+               data-mb-id="${a.mbId || ''}">
+            <img class="card-cover" src="${cover}" alt="" loading="lazy" onerror="this.src='https://via.placeholder.com/300?text=No+Cover'">
+            <div class="card-body">
+              <div class="card-title">${escapeHtml(a.title)}</div>
+              <div class="card-artist">${escapeHtml(a.artist)}</div>
+              <div class="card-year">${a.year || ''}</div>
+              <div class="card-source">${a.source}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('searchResults').addEventListener('click', async (e) => {
+      const card = e.target.closest('.search-card');
+      if (!card) return;
+      
+      const id = card.dataset.id;
+      const records = await getRecords();
+      const existing = records.find(r => r.id === id);
+      
+      if (existing) {
+        showToast('这张专辑已经记录过了');
+        openEdit(id);
+        return;
+      }
+      
+      openAdd(card.dataset);
+    });
+
+    let modalState = { mode: null, id: null, tracks: [], meta: {}, cover: '' };
+
+    async function openAdd(data) {
+      modalState = { 
+        mode: 'add', 
+        id: data.id, 
+        tracks: [],
+        cover: data.cover,
+        meta: {
+          source: data.source,
+          deezerId: data.deezerId || '',
+          mbId: data.mbId || ''
+        }
+      };
+      
+      document.getElementById('modalCover').src = data.cover;
+      document.getElementById('modalTitle').textContent = data.title;
+      document.getElementById('modalArtist').textContent = data.artist;
+      document.getElementById('modalScore').value = '';
+      document.getElementById('modalNote').value = '';
+      document.getElementById('tracksList').innerHTML = '<div class="loading">正在加载曲目...</div>';
+      document.getElementById('editModal').classList.add('show');
+      
+      try {
+        const tracks = await fetchTracks(data.id, data.source, data.deezerId, data.mbId);
+        modalState.tracks = tracks;
+        renderTracks();
+      } catch (err) {
+        document.getElementById('tracksList').innerHTML = '<div class="loading">加载曲目失败</div>';
+      }
+    }
+
+    async function openEdit(id) {
+      const records = await getRecords();
+      const r = records.find(x => x.id === id);
+      if (!r) return;
+      
+      modalState = { 
+        mode: 'edit', 
+        id, 
+        tracks: r.tracks || [],
+        cover: r.cover,
+        meta: r.meta || {}
+      };
+      
+      document.getElementById('modalCover').src = r.cover;
+      document.getElementById('modalTitle').textContent = r.title;
+      document.getElementById('modalArtist').textContent = r.artist;
+      document.getElementById('modalScore').value = r.rating || '';
+      document.getElementById('modalNote').value = r.note || '';
+      
+      if (!r.tracks || r.tracks.length === 0) {
+        document.getElementById('tracksList').innerHTML = '<div class="loading">正在加载曲目...</div>';
+        try {
+          const tracks = await fetchTracks(id, r.meta?.source, r.meta?.deezerId, r.meta?.mbId);
+          modalState.tracks = tracks;
+          renderTracks();
+        } catch (err) {
+          document.getElementById('tracksList').innerHTML = '<div class="loading">加载曲目失败</div>';
+        }
+      } else {
+        renderTracks();
+      }
+      
+      document.getElementById('editModal').classList.add('show');
+    }
+
+    async function fetchTracks(id, source, deezerId, mbId) {
+      if (source === 'iTunes' || id.startsWith(String(parseInt(id)))) {
+        try {
+          const url = `https://itunes.apple.com/lookup?id=${id}&entity=song&country=us`;
+          const res = await fetch(url);
+          const data = await res.json();
+          const tracks = (data.results || [])
+            .filter(x => x.wrapperType === 'track' || x.kind === 'song')
+            .sort((a, b) => (a.trackNumber || 0) - (b.trackNumber || 0))
+            .map(t => ({
+              id: String(t.trackId || t.trackCensoredName),
+              name: t.trackName || t.trackCensoredName || 'Unknown Track',
+              number: t.trackNumber || 0,
+              rating: 0
+            }));
+          if (tracks.length > 0) return tracks;
+        } catch (e) {}
+      }
+      
+      if (deezerId) {
+        try {
+          const res = await fetch(`https://api.deezer.com/album/${deezerId}`);
+          const data = await res.json();
+          const tracks = (data.tracks?.data || []).map((t, idx) => ({
+            id: String(t.id || t.title),
+            name: t.title || 'Unknown Track',
+            number: idx + 1,
+            rating: 0
+          }));
+          if (tracks.length > 0) return tracks;
+        } catch (e) {}
+      }
+      
+      if (mbId) {
+        try {
+          const res = await fetch(`https://musicbrainz.org/ws/2/release/${mbId}?inc=recordings&fmt=json`, {
+            headers: { 'User-Agent': 'MusicDiaryPWA/1.0 (personal use)' }
+          });
+          const data = await res.json();
+          const tracks = [];
+          const mediums = data.media || [];
+          let number = 1;
+          for (const m of mediums) {
+            for (const t of (m.tracks || [])) {
+              tracks.push({
+                id: String(t.id || t.recording?.id || number),
+                name: t.recording?.title || t.title || 'Unknown Track',
+                number: number++,
+                rating: 0
+              });
+            }
+          }
+          if (tracks.length > 0) return tracks;
+        } catch (e) {}
+      }
+      
+      return [];
+    }
+
+    function renderTracks() {
+      const container = document.getElementById('tracksList');
+      if (modalState.tracks.length === 0) {
+        container.innerHTML = '<div class="loading">暂无曲目信息</div>';
+        return;
+      }
+      container.innerHTML = modalState.tracks.map((t, idx) => `
+        <div class="track-item">
+          <div class="track-number">${t.number || idx + 1}</div>
+          <div class="track-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</div>
+          <div class="track-stars" data-idx="${idx}" role="button" aria-label="单曲评分">
+            ${[1,2,3,4,5].map(n => `<span class="star ${n <= t.rating ? 'filled' : ''}" data-star="${n}">★</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('tracksList').addEventListener('click', (e) => {
+      const star = e.target.closest('.track-stars .star');
+      if (!star) return;
+      e.stopPropagation();
+      e.preventDefault();
+      
+      const idx = Number(star.closest('.track-stars').dataset.idx);
+      const rating = Number(star.dataset.star);
+      const trackName = modalState.tracks[idx].name;
+      
+      modalState.tracks[idx].rating = rating;
+      renderTracks();
+      showToast(`《${trackName.slice(0, 12)}${trackName.length > 12 ? '...' : ''}》${rating} 星`);
+    });
+
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('show');
+      modalState = { mode: null, id: null, tracks: [], meta: {}, cover: '' };
+    }
+
+    async function saveModal() {
+      if (!modalState.id) return;
+      
+      const scoreInput = document.getElementById('modalScore').value;
+      const score = scoreInput === '' ? 0 : Math.max(0, Math.min(10, parseFloat(scoreInput) || 0));
+      
+      const recordData = {
+        id: modalState.id,
+        title: document.getElementById('modalTitle').textContent,
+        artist: document.getElementById('modalArtist').textContent,
+        cover: modalState.cover,
+        rating: score,
+        note: document.getElementById('modalNote').value.trim(),
+        tracks: modalState.tracks,
+        meta: modalState.meta,
+        date: new Date().toISOString()
+      };
+      
+      if (modalState.mode === 'add') {
+        const records = await getRecords();
+        const existing = records.find(r => r.id === modalState.id);
+        if (existing) {
+          showToast('这张专辑已经记录过了');
+          closeModal();
+          return;
+        }
+        await saveRecord(recordData);
+        showToast('已添加');
+      } else {
+        const records = await getRecords();
+        const r = records.find(x => x.id === modalState.id);
+        if (!r) return;
+        Object.assign(r, recordData);
+        await saveRecord(r);
+        showToast('已保存');
+      }
+      
+      closeModal();
+      renderRecords();
+    }
+
+    async function renderRecords() {
+      const records = await getRecords();
+      const container = document.getElementById('myRecords');
+      records.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      if (records.length === 0) {
+        container.innerHTML = '<div class="empty">还没有记录，去搜索一张专辑吧</div>';
+        return;
+      }
+      
+      container.innerHTML = records.map(r => `
+        <div class="card" onclick="openEdit('${r.id}')">
+          <img class="card-cover" src="${r.cover}" alt="" loading="lazy" onerror="this.src='https://via.placeholder.com/300?text=No+Cover'">
+          <div class="card-body">
+            <div class="card-title">${escapeHtml(r.title)}</div>
+            <div class="card-artist">${escapeHtml(r.artist)}</div>
+            ${r.rating ? `<div class="album-score">${r.rating}</div>` : ''}
+            ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function exportData() {
+      const records = await getRecords();
+      if (records.length === 0) {
+        showToast('还没有记录可导出');
+        return;
+      }
+      const data = {
+        app: 'music-diary',
+        version: 3,
+        exportDate: new Date().toISOString(),
+        records
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `music-diary-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已导出');
+    }
+
+    async function importData(input) {
+      const file = input.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const records = data.records || data;
+        if (!Array.isArray(records)) throw new Error('格式错误');
+        
+        let count = 0;
+        for (const r of records) {
+          if (r.id && r.title) {
+            if (!r.tracks) r.tracks = [];
+            if (!r.meta) r.meta = {};
+            await saveRecord(r);
+            count++;
+          }
+        }
+        renderRecords();
+        showToast(`成功导入 ${count} 条记录`);
+      } catch (err) {
+        showToast('导入失败：文件格式不对');
+      }
+      input.value = '';
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    renderRecords();
+  </script>
+</body>
+</html>
